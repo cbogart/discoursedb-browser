@@ -99,7 +99,8 @@ function maketable(result) {
         });
     }
     if (items.length == 0) { return "(no data)"; }
-    var columns = Object.keys(items[0]);
+    var columns = key_union(items);
+ 
     var html = "<table border=1><tr>";
     columns.forEach(function(entry) { html += "<th>" + entry + "</th>"; });
     html += "</tr>\n";
@@ -108,7 +109,7 @@ function maketable(result) {
          html += "<tr>";
          columns.forEach(function(col) {
              if (col != "_links") {
-              html += "<td>" + item[col] + "</td>";
+              html += "<td>" + pretty_print(item[col]) + "</td>";
              } else {
               html += "<td>" + links(item[col]) + "</td>";
              }
@@ -116,8 +117,60 @@ function maketable(result) {
          html += "</tr>\n";
          }
     });
+    html += "</table>";
     return html;
 }
+
+function pretty_print(entry) {
+    if (is_list_of_objects(entry)) {
+        var c = column_transform(entry);
+        if (c instanceof Array) {
+           return maketable({"_embedded": { "whatever": column_transform(entry) }});
+        } else {
+           return maketable({"_embedded": { "whatever": [column_transform(entry)] }});
+        }
+    } else {
+        return entry;
+    }
+}
+
+function key_union(items) {
+    // find union of all column headers in all rows
+    // Stupid code: use underscore or lodash
+    var columns = [];
+    items.forEach(function(i) {
+        Object.keys(i).forEach(function(k) {
+            if (columns.indexOf(k) == -1) {
+                columns.push(k);
+            }
+        })
+    }); 
+    return columns;
+}
+
+function is_list_of_objects(entry) { return (entry instanceof Array && entry[0] === Object(entry[0])); }
+
+function column_transform(list_of_objects) {
+    if (!is_list_of_objects(list_of_objects)) { return list_of_objects; }
+ 
+    var keys = key_union(list_of_objects);
+    if (keys.length == 2 && keys.indexOf("type") > -1) {
+        var otherkey = keys[1-keys.indexOf("type")];
+        var rv = {};
+        list_of_objects.forEach(function(i) {
+            var cols = column_transform(i[otherkey]);
+            console.log("transformed ", cols, " from ", i[otherkey]);
+            if (!(i["type"] in rv)) {
+                rv[i["type"]] = [];
+            }
+            rv[i["type"]].push(cols);
+        });
+        return rv;
+    } else {
+        return list_of_objects;
+    }
+}
+
 
 $.showParameters = {
    url: "http://" + base_url + ":8080/discourseParts/",
@@ -173,8 +226,8 @@ $("#nonDegenerate").click(function() {
    loadPage();
 });
 $("#repos").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/discourseParts/";
-   $.showParameters.continuation = ["annotationAggregate", "annotationInstances", "features"]
+   $.showParameters.url = "http://" + base_url + ":8080/browsing/repos";
+   $.showParameters.parameters = {};
    loadPage();
 });
 $("#annotationInstances").click(function() {
