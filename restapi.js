@@ -98,26 +98,38 @@ function maketable(result) {
             }
         });
     }
-    if (items.length == 0) { return "(no data)"; }
-    var columns = key_union(items);
- 
-    var html = "<table border=1><tr>";
-    columns.forEach(function(entry) { html += "<th>" + entry + "</th>"; });
-    html += "</tr>\n";
-    items.forEach(function(item) {
-         if (item != "_links") {
-         html += "<tr>";
-         columns.forEach(function(col) {
-             if (col != "_links") {
-              html += "<td>" + pretty_print(item[col]) + "</td>";
-             } else {
-              html += "<td>" + links(item[col]) + "</td>";
+
+    var html = "";
+    if (is_list_of_objects(items)) {
+        if (items.length == 0) { return "(no data)"; }
+        var columns = key_union(items);
+     
+        html = "<table width=100% border=1><tr>";
+        columns.forEach(function(entry) { html += "<th>" + entry + "</th>"; });
+        html += "</tr>\n";
+        items.forEach(function(item) {
+             if (item != "_links") {
+             html += "<tr>";
+             columns.forEach(function(col) {
+                 if (col != "_links") {
+                  html += "<td>" + pretty_print(item[col]) + "</td>";
+                 } else {
+                  html += "<td>" + links(item[col]) + "</td>";
+                 }
+             });
+             html += "</tr>\n";
              }
-         });
-         html += "</tr>\n";
-         }
-    });
-    html += "</table>";
+        });
+        html += "</table>";
+    } else if (typeof items == "object" && items != null) {
+        html = "<table border=1>";
+        Object.keys(items).forEach(function(k) {
+            html += "<tr><td>" + k + "</td><td>" + items[k] + "</td></tr>";
+        });
+        html += "</table>\n";
+    } else {
+        html += items;
+    }
     return html;
 }
 
@@ -129,6 +141,9 @@ function pretty_print(entry) {
         } else {
            return maketable({"_embedded": { "whatever": [column_transform(entry)] }});
         }
+
+    } else if (typeof entry == "object" && entry != null) {
+        return maketable({"_embedded": { "whatever": entry }});
     } else {
         return entry;
     }
@@ -138,6 +153,7 @@ function key_union(items) {
     // find union of all column headers in all rows
     // Stupid code: use underscore or lodash
     var columns = [];
+
     items.forEach(function(i) {
         Object.keys(i).forEach(function(k) {
             if (columns.indexOf(k) == -1) {
@@ -148,7 +164,9 @@ function key_union(items) {
     return columns;
 }
 
-function is_list_of_objects(entry) { return (entry instanceof Array && entry[0] === Object(entry[0])); }
+function is_list_of_objects(entry) { 
+    return (entry instanceof Array && typeof entry[0] =="object" && entry[0] != null);
+}
 
 function column_transform(list_of_objects) {
     if (!is_list_of_objects(list_of_objects)) { return list_of_objects; }
@@ -187,6 +205,7 @@ function loadPage() {
    var returnData = "";
    $("#theQueryUrl").val($.showParameters.url);
    $.getJSON($.showParameters.url, $.showParameters.parameters, function(result) {
+        if (!("_links" in result)) { result._links = {}; }
         $("#output").html(maketable(result) + links(result._links) + pageinfo(result));
         $("#searching").html(maketable(result) + links(result._links) + pageinfo(result));
    });
@@ -198,10 +217,9 @@ $("#dp").click(function() {
    $.showParameters.parameters = {};
    loadPage();
 });
-$("#dpPlus").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/discourseParts";
+$("#stats").click(function() {
+   $.showParameters.url = "http://" + base_url + ":8080/browsing/stats";
    $.showParameters.parameters = {};
-   $.showParameters.followon = ["discourseToDiscourseParts"];
    loadPage();
 });
 $("#cont").click(function() {
@@ -226,7 +244,7 @@ $("#nonDegenerate").click(function() {
    loadPage();
 });
 $("#repos").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/browsing/repos";
+   $.showParameters.url = "http://" + base_url + ":8080/browsing/repos?repoType=GITHUB_REPO&annoType=MATRIX_FACTORIZATION";
    $.showParameters.parameters = {};
    loadPage();
 });
