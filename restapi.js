@@ -19,7 +19,7 @@ function url_parts(url) {
        }
 }
 
-var base_url = "localhost";
+var base_url = "http://localhost:8080";
 
 /*
  * from a _links section, generate html that links to or queries those links
@@ -29,11 +29,16 @@ function links(l) {
     Object.keys(l).forEach(function(item) {
        var fullurl = l[item].href;
        var parts = url_parts(fullurl);
-       var href2 = l[item].href.split("/").slice(3,99).join("/");
+       var href2 = l[item].href.split("/").slice(3).join("/");
        if (parts.parameterNames.length > 0) { 
            html += "<div class='act'>";
            parts.parameterNames.forEach(function (p) {
-               html += p + ": <input id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
+               if (parts.url == $.showParameters.url) {
+                   v = $.showParameters.parameters[item] || "";
+               } else {
+                   v = "";
+               }
+               html += p + ": <input value='" + v + "' id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
            });
            html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
            html += "</div>";
@@ -54,8 +59,12 @@ $(function() {
     console.log("CLICK", btn);
     var parts = url_parts(btn.attr("desturl"));
     console.log("url = ", parts.url);
+    $.showParameters.breadcrumbs.push(parts.url); 
     $.showParameters.url = parts.url;
     $.showParameters.parameters = { }
+    if (btn.is("[hist]")) {
+         $.showParameters.breadcrumbs = $.showParameters.breadcrumbs.slice(0,+btn.attr("hist")+1);
+    }
     parts.parameterNames.forEach(function(p) {
         var inputid = "#go_" + btn.val();
         var paramid = "#param_" + btn.val() + "_" + p;
@@ -144,6 +153,8 @@ function pretty_print(entry) {
 
     } else if (typeof entry == "object" && entry != null) {
         return maketable({"_embedded": { "whatever": entry }});
+    } else if (entry instanceof Array && entry.length == 1) {
+        return entry[0];
     } else {
         return entry;
     }
@@ -191,7 +202,8 @@ function column_transform(list_of_objects) {
 
 
 $.showParameters = {
-   url: "http://" + base_url + ":8080/discourseParts/",
+   url: base_url + "/browsing/stats/",
+   breadcrumbs: [base_url + "/browsing/stats/"],
    parameters: {}
 }
 
@@ -206,57 +218,71 @@ function loadPage() {
    $("#theQueryUrl").val($.showParameters.url);
    $.getJSON($.showParameters.url, $.showParameters.parameters, function(result) {
         if (!("_links" in result)) { result._links = {}; }
-        $("#output").html(maketable(result) + links(result._links) + pageinfo(result));
-        $("#searching").html(maketable(result) + links(result._links) + pageinfo(result));
+        $("#output").html(links(result._links) + pageinfo(result) + maketable(result));
+        $("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
+        var bc = -1;
+        $("#breadcrumbs").html($.showParameters.breadcrumbs.map(function(b) {
+            bc = bc + 1;
+            return "<button hist=" + bc + " class='actions crumb' desturl='" + b + "'>"
+             + b.slice(base_url.length).replace("\?","<br/>") + "</button>"; 
+        }));
+              
    });
 
 };
 
 $("#dp").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/discourseParts";
+   $.showParameters.url = base_url + "/discourseParts";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#stats").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/browsing/stats";
+   $.showParameters.url = base_url + "/browsing/stats";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#cont").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/contributions/";
+   $.showParameters.url = base_url + "/contributions/";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#user").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/users/";
+   $.showParameters.url = base_url + "/users/";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#features").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/features/";
+   $.showParameters.url = base_url + "/features/";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#nonDegenerate").click(function() {
-   console.log("X");
-   $.showParameters.url = "http://" + base_url + ":8080/discourseParts/search/findAllNotAnnotatedWithType";
+   $.showParameters.url = base_url + "/discourseParts/search/findAllNotAnnotatedWithType";
    $.showParameters.parameters = { "type": "Degenerate", "size": "5" };
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#repos").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/browsing/repos?repoType=GITHUB_REPO&annoType=MATRIX_FACTORIZATION";
+   $.showParameters.url = base_url + "/browsing/repos?repoType=GITHUB_REPO&annoType=MATRIX_FACTORIZATION";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#annotationInstances").click(function() {
-   $.showParameters.url = "http://" + base_url + ":8080/annotationInstances";
+   $.showParameters.url = base_url + "/annotationInstances";
    $.showParameters.parameters = {};
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 $("#go").click(function() {
    $.showParameters.url = $('#theQueryUrl').val();
    $.showParameters.parameters = {};
-   $.showParameters.followon = [];
+   $.showParameters.breadcrumbs = [$.showParameters.url];
    loadPage();
 });
 

@@ -2,6 +2,16 @@
 <html>
 <head>
 <style>
+ .crumb {
+     background:#cfc;
+     border-radius:6px;
+     padding:1px;
+     padding-left:6px;
+     padding-right:6px;
+     margin:3px;
+     -moz-border-radius:6px;
+     -webkit-border-radius:6px;
+  }
  .pageinfo {
      background:#ccf;
      border-radius:6px;
@@ -24,15 +34,21 @@
 <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 </head>
 <body>
+
+<table><tr><td>
+<span id="breadcrumbs"></span>
+</td></tr></table>
+
 <input size=350 type='text' id="theQueryUrl"></input><input id="go" type="submit">
-<input id="dp" type="submit" value="DiscourseParts"/>
 <input id="stats" type="submit" value="Stats"/>
+<!--<input id="dp" type="submit" value="DiscourseParts"/>
 <input id="cont" type="submit" value="Contributions"/>
 <input id="user" type="submit" value="Users"/>
 <input id="repos" type="submit" value="Repositories"/>
 <input id="features" type="submit" value="Features"/>
 <input id="annotationInstances" type="submit" value="Annotation Instances"/>
-<p><div id="output">Output goes here</div>
+-->
+<p><div id="output">WAIT.... loading data</div>
 <p>
 <script src="restapi.js"></script>
 </body>
