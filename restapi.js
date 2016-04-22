@@ -11,13 +11,42 @@ function url_parts(url) {
                url : url.substring(0, curly),
                parameterNames : url.substring(curly+2,url.length-1).split(",")
            }
-       } else {
+       } /*else if (url.indexOf("?") > -1) {
+           params = {};
+           url.split("?")[1].split("&").forEach(function(eq) {
+               var kv = eq.split("=");
+               params[kv[0]] = kv[1];
+           });
+           return {
+               url : url,
+               core_url : url.split("?")[0],
+               parameterHash: params,
+               parameterNames: Object.keys(params)
+           }
+       } */else {
            return {
                url : url,
                parameterNames : []
            }
        }
 }
+
+// https://github.com/janl/mustache.js/blob/master/mustache.js#L82
+var entityMap = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': '&quot;',
+    "'": '&#39;',
+    "/": '&#x2F;'
+  };
+
+  function escapeHtml(string) {
+    return String(string).replace(/[&<>"'\/]/g, function (s) {
+      return entityMap[s];
+    });
+  }
+
 
 var base_url = "http://localhost:8080";
 
@@ -38,7 +67,7 @@ function links(l) {
                } else {
                    v = "";
                }
-               html += p + ": <input value='" + v + "' id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
+               html += p + ": <input id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
            });
            html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
            html += "</div>";
@@ -120,10 +149,12 @@ function maketable(result) {
              if (item != "_links") {
              html += "<tr>";
              columns.forEach(function(col) {
-                 if (col != "_links") {
-                  html += "<td>" + pretty_print(item[col]) + "</td>";
-                 } else {
+                 if (col == "_links") {
                   html += "<td>" + links(item[col]) + "</td>";
+                 } else if (col == "content" || col == "body" || col == "text") {
+                  html += "<td><pre>" + escapeHtml(item[col]) + "</pre></td>";
+                 } else {
+                  html += "<td>" + pretty_print(item[col]) + "</td>";
                  }
              });
              html += "</tr>\n";
