@@ -1,4 +1,9 @@
 
+
+
+/*  deal with back button: https://developer.mozilla.org/en-US/docs/Web/API/History_API?redirectlocale=en-US&redirectslug=DOM%2FManipulating_the_browser_history#Adding_and_modifying_history_entries
+*/
+
 /*
  * separate true url from bracketed syntax at the end listing REST parameters
  * i.e.  http://abc/def/{?thi,asdf} ->
@@ -55,26 +60,31 @@ var base_url = "http://localhost:8080";
  */
 function links(l) {
     var html = "";
-    Object.keys(l).forEach(function(item) {
-       var fullurl = l[item].href;
-       var parts = url_parts(fullurl);
-       var href2 = l[item].href.split("/").slice(3).join("/");
-       if (parts.parameterNames.length > 0) { 
-           html += "<div class='act'>";
-           parts.parameterNames.forEach(function (p) {
-               if (parts.url == $.showParameters.url) {
-                   v = $.showParameters.parameters[item] || "";
-               } else {
-                   v = "";
-               }
-               html += p + ": <input id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
-           });
-           html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
-           html += "</div>";
-       } else {
-           html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
-       }
-    });
+    try {
+        Object.keys(l).forEach(function(item) {
+           var fullurl = l[item].href;
+           var parts = url_parts(fullurl);
+           var href2 = l[item].href.split("/").slice(3).join("/");
+           if (parts.parameterNames.length > 0) { 
+               html += "<div class='act'>";
+               parts.parameterNames.forEach(function (p) {
+                   if (parts.url == $.showParameters.url) {
+                       v = $.showParameters.parameters[item] || "";
+                   } else {
+                       v = "";
+                   }
+                   html += p + ": <input id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
+               });
+               html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
+               html += "</div>";
+           } else {
+               html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
+           }
+        });
+    } catch (e) {
+        html = "(no links)";
+        console.log(e);
+    }
     return html;
 }
 
@@ -147,20 +157,28 @@ function maketable(result) {
         html += "</tr>\n";
         items.forEach(function(item) {
              if (item != "_links") {
-             html += "<tr>";
-             columns.forEach(function(col) {
-                 if (col == "_links") {
-                  html += "<td>" + links(item[col]) + "</td>";
-                 } else if (col == "content" || col == "body" || col == "text") {
-                  html += "<td><pre>" + escapeHtml(item[col]) + "</pre></td>";
-                 } else {
-                  html += "<td>" + pretty_print(item[col]) + "</td>";
+               html += "<tr>";
+               columns.forEach(function(col) {
+                   if (col == "_links") {
+                    html += "<td>" + links(item[col]) + "</td>";
+                   } else if (col == "content" || col == "body" || col == "text") {
+                    html += "<td><pre>" + escapeHtml(item[col]) + "</pre></td>";
+                   } else {
+                    html += "<td>" + pretty_print(item[col]) + "</td>";
                  }
-             });
-             html += "</tr>\n";
+               });
+               html += "</tr>\n";
              }
         });
         html += "</table>";
+    } else if (items != null && items instanceof Array && items.length == 1) {
+        html += items[0];
+    } else if (items != null && items instanceof Array) {
+        html = "<table border=1>";
+        Object.keys(items).forEach(function(k) {
+            html += "<tr><td>" + items[k] + "</td></tr>";
+        });
+        html += "</table>\n";
     } else if (typeof items == "object" && items != null) {
         html = "<table border=1>";
         Object.keys(items).forEach(function(k) {
@@ -195,7 +213,7 @@ function key_union(items) {
     // find union of all column headers in all rows
     // Stupid code: use underscore or lodash
     var columns = [];
-
+    
     items.forEach(function(i) {
         Object.keys(i).forEach(function(k) {
             if (columns.indexOf(k) == -1) {
@@ -203,6 +221,9 @@ function key_union(items) {
             }
         })
     }); 
+    if (columns.indexOf("_links") > -1) {
+        columns = ["_links"].concat(columns.filter(e => e !== '_links'));
+    }
     return columns;
 }
 
