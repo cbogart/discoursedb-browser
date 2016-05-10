@@ -268,7 +268,8 @@ $.showParameters = {
 function loadPage() {
    var returnData = "";
    $("#theQueryUrl").val($.showParameters.url);
-   $.getJSON($.showParameters.url, $.showParameters.parameters, function(result) {
+   $("#output").html("Waiting for response from server.....");
+   $.getJSON($.showParameters.url, $.showParameters.parameters).done(function(result) {
         if (!("_links" in result)) { result._links = {}; }
         $("#output").html(links(result._links) + pageinfo(result) + maketable(result));
         $("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
@@ -279,7 +280,8 @@ function loadPage() {
              + b.slice(base_url.length).replace("\?","<br/>") + "</button>"; 
         }));
               
-   });
+   })
+   .fail(function(x, textStatus, error) { $("#output").html(textStatus + "<br>" + error); });
 
 };
 
