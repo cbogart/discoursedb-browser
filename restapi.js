@@ -35,6 +35,9 @@ function url_parts(url) {
            }
        }
 }
+$(function () {
+    $("table").stickyTableHeaders();
+});
 
 // https://github.com/janl/mustache.js/blob/master/mustache.js#L82
 var entityMap = {
@@ -53,7 +56,22 @@ var entityMap = {
   }
 
 
-var base_url = "http://localhost:8080";
+var base_url = "http://localhost:5280";
+
+function actuator(itemname, fullurl) {
+    if (itemname.startsWith("chk:")) {
+         var humanname = itemname.split(":")[1];
+         var nicename = name2token(humanname);
+         if (!(nicename in $.showParameters.checkhandlers)) {
+             $("#checkHandlingArea").append('<div class="checkContainer"> ' + humanname + ': <input class="checkToggle checkButtons" value="Toggle Checkboxes" nicename="' + nicename + '" type=button>' +
+                                             '<input class="checkActivate checkButtons veryVisibleButton" disabled="true" value="Submit Checkboxes" nicename="' + nicename + '" type=button></div>');
+             $.showParameters.checkhandlers[nicename] = 1;
+         }
+         return "<div class='checkContainer'><input class='" + nicename + " checkmark' value='on' nicename='" + nicename + "' desturl='" + fullurl + "' type=checkbox></input>" + humanname + "</div>";
+    } else {
+         return "<input class='actions' id='go_" + itemname + "' value='" + itemname + "' desturl='" + fullurl + "' type=submit></input>";
+    }
+}
 
 /*
  * from a _links section, generate html that links to or queries those links
@@ -75,10 +93,10 @@ function links(l) {
                    }
                    html += p + ": <input id='param_" + item + "_" + p + "' desturl='" + fullurl + "' type=text></input>";
                });
-               html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
+               html += actuator(item,fullurl);
                html += "</div>";
            } else {
-               html += "<input class='actions' id='go_" + item + "' value='" + item + "' desturl='" + fullurl + "' type=submit></input>";
+               html +=  actuator(item,fullurl);
            }
         });
     } catch (e) {
@@ -88,31 +106,82 @@ function links(l) {
     return html;
 }
 
+function name2token(name) {
+    return name.replace(/[^\w]/g, '');
+}
+
 /*
  * When user clicks a link (created by links() function),
  * set the url and parameters and issue the rest request
  */
 $(function() {
+  window.onpopstate = function(event) {
+    $.showParameters = event.state;
+    console.log("Popstate! " + $.showParameters.url);
+    $.showParameters.checkhandlers = {};
+    loadPage();
+  };
+  $(document).on('click', '.checkToggle', function(event) {
+    var nicename = $(event.target).attr("nicename");
+    console.log("Toggling everything with class " + nicename);
+    $("." + nicename).each(function(i,chkbox) {
+        console.log("Toggling " + chkbox);
+        $(chkbox).attr("checked", !$(chkbox).attr("checked"));
+    });
+  });
+  $(document).on('click', '.checkmark', function(event) {
+    var nicename = $(event.target).attr("nicename");
+    var anychecked = false;
+    console.log("Maybe enabling button: checking " + "."+nicename);
+    $("." + nicename).each(function(i,chkbox) {
+        console.log("checking " + chkbox);
+        anychecked = anychecked || $(chkbox).prop("checked");
+    });
+    console.log("  anychecked=" + anychecked);
+    $(".checkActivate[nicename='" + nicename + "']").prop("disabled", !anychecked);
+  });
+  $(document).on('click', '.checkActivate', function(event) {
+    var nicename = $(event.target).attr("nicename");
+    postUrls = [];
+    $("." + nicename).each(function(i,chkbox) {
+        console.log("Adding " + $(chkbox) + " if appropriate");
+        if (chkbox.checked) {
+            postUrls.push(chkbox.getAttribute("desturl"));
+        }
+    });
+    loadMultiplePages(postUrls);
+  });
   $(document).on('click', '.actions', function(event) {
     var btn = $(event.target);
-    console.log("CLICK", btn);
-    var parts = url_parts(btn.attr("desturl"));
-    console.log("url = ", parts.url);
-    $.showParameters.breadcrumbs.push(parts.url); 
-    $.showParameters.url = parts.url;
-    $.showParameters.parameters = { }
     if (btn.is("[hist]")) {
-         $.showParameters.breadcrumbs = $.showParameters.breadcrumbs.slice(0,+btn.attr("hist")+1);
-    }
-    parts.parameterNames.forEach(function(p) {
-        var inputid = "#go_" + btn.val();
-        var paramid = "#param_" + btn.val() + "_" + p;
-        console.log("paramid = ", paramid);
-        $.showParameters.parameters[p] = $(paramid).val();
-        console.log("paramid contains " ,$(paramid).val());
-    });
-    console.log("params = ", $.showParameters.parameters);
-    loadPage();
+         var backsteps = parseInt(btn.attr("hist")) - (parseInt($.showParameters.breadcrumbs.length)-1);
+         if (backsteps < 0) {
+             window.history.go(backsteps);
+         }
+    } else { 
+        console.log("CLICK", btn);
+        var parts = url_parts(btn.attr("desturl"));
+        console.log("url = ", parts.url);
+        if (!parts.url.startsWith(base_url)) {
+            window.open(parts.url, "_external");
+            return;
+        }
+        $.showParameters.breadcrumbs.push(parts.url); 
+        $.showParameters.url = parts.url;
+        //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
+        window.history.pushState($.showParameters,""); 
+        $.showParameters.parameters = { }
+        $.showParameters.checkhandlers = {};
+         parts.parameterNames.forEach(function(p) {
+            var inputid = "#go_" + btn.val();
+            var paramid = "#param_" + btn.val() + "_" + p;
+            console.log("paramid = ", paramid);
+            $.showParameters.parameters[p] = $(paramid).val();
+            console.log("paramid contains " ,$(paramid).val());
+         });
+         console.log("params = ", $.showParameters.parameters);
+         loadPage();
+     }
   });
 });
 
@@ -152,9 +221,9 @@ function maketable(result) {
         if (items.length == 0) { return "(no data)"; }
         var columns = key_union(items);
      
-        html = "<table width=100% border=1><tr>";
+        html = '<table id=stickyheaders width=100% border=1><thead class="tableFloatingHeaderOriginal"><tr>';
         columns.forEach(function(entry) { html += "<th>" + entry + "</th>"; });
-        html += "</tr>\n";
+        html += "</tr></thead><tbody>\n";
         items.forEach(function(item) {
              if (item != "_links") {
                html += "<tr>";
@@ -170,7 +239,7 @@ function maketable(result) {
                html += "</tr>\n";
              }
         });
-        html += "</table>";
+        html += "</tbody></table>";
     } else if (items != null && items instanceof Array && items.length == 1) {
         html += items[0];
     } else if (items != null && items instanceof Array) {
@@ -240,7 +309,6 @@ function column_transform(list_of_objects) {
         var rv = {};
         list_of_objects.forEach(function(i) {
             var cols = column_transform(i[otherkey]);
-            console.log("transformed ", cols, " from ", i[otherkey]);
             if (!(i["type"] in rv)) {
                 rv[i["type"]] = [];
             }
@@ -256,7 +324,14 @@ function column_transform(list_of_objects) {
 $.showParameters = {
    url: base_url + "/browsing/stats/",
    breadcrumbs: [base_url + "/browsing/stats/"],
-   parameters: {}
+   parameters: {},
+   checkhandlers: {},
+}
+window.history.replaceState($.showParameters,""); 
+
+
+function showHistory() {
+   //window.alert("History length " + window.history.length);
 }
 
 /*
@@ -265,78 +340,68 @@ $.showParameters = {
  *          special case for 2-way link
  */
 
-function loadPage() {
-   var returnData = "";
-   $("#theQueryUrl").val($.showParameters.url);
-   $("#output").html("Waiting for response from server.....");
-   $.getJSON($.showParameters.url, $.showParameters.parameters).done(function(result) {
-        if (!("_links" in result)) { result._links = {}; }
-        $("#output").html(links(result._links) + pageinfo(result) + maketable(result));
-        $("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
+function displayBreadcrumbs() {
         var bc = -1;
         $("#breadcrumbs").html($.showParameters.breadcrumbs.map(function(b) {
             bc = bc + 1;
             return "<button hist=" + bc + " class='actions crumb' desturl='" + b + "'>"
              + b.slice(base_url.length).replace("\?","<br/>") + "</button>"; 
         }));
-              
+}
+
+function loadPage() {
+   showHistory();
+   var returnData = "";
+   $("#theQueryUrl").val($.showParameters.url);
+   $("#output").html("Waiting for response from server.....");
+   $("#checkHandlingArea").html("");
+   $.getJSON($.showParameters.url, $.showParameters.parameters).done(function(result) {
+        if (!("_links" in result)) { result._links = {}; }
+
+        $("#output").html(links(result._links) + pageinfo(result) + maketable(result));
+        $("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
+        displayBreadcrumbs();      
+        $(window).trigger('resize.stickyTableHeaders');
    })
    .fail(function(x, textStatus, error) { $("#output").html(textStatus + "<br>" + error); });
-
 };
 
-$("#dp").click(function() {
-   $.showParameters.url = base_url + "/discourseParts";
+function loadMultiplePages(urls) {
+   console.log("LMP " + urls);
+   $("#output").html("" + urls.length + " actions being submitted... please wait");
+   $("#checkHandlingArea").html("");
+   if (urls.length > 1) {
+      console.log("A" + urls.length);
+      $.getJSON(urls[0]).done(function(result) {
+        console.log("B" + urls.length);
+        loadMultiplePages(urls.slice(1));
+        console.log("C" + urls.length);
+      });
+      console.log("D" + urls.length);
+   } else {
+      console.log("E" + urls.length);
+      $.showParameters.url = urls[0];
+      $.showParameters.parameters = {};
+      $.showParameters.checkhandlers = {};
+      $.showParameters.breadcrumbs.push($.showParameters.url);
+      loadPage();
+      console.log("F" + urls.length);
+   }
+}
+
+function resetShowParameters(url) {
+   $.showParameters.url = url;
    $.showParameters.parameters = {};
    $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
+   $.showParameters.checkhandlers = {};
+}
+
 $("#stats").click(function() {
-   $.showParameters.url = base_url + "/browsing/stats";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#cont").click(function() {
-   $.showParameters.url = base_url + "/contributions/";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#user").click(function() {
-   $.showParameters.url = base_url + "/users/";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#features").click(function() {
-   $.showParameters.url = base_url + "/features/";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#nonDegenerate").click(function() {
-   $.showParameters.url = base_url + "/discourseParts/search/findAllNotAnnotatedWithType";
-   $.showParameters.parameters = { "type": "Degenerate", "size": "5" };
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#repos").click(function() {
-   $.showParameters.url = base_url + "/browsing/repos?repoType=GITHUB_REPO&annoType=MATRIX_FACTORIZATION";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
-   loadPage();
-});
-$("#annotationInstances").click(function() {
-   $.showParameters.url = base_url + "/annotationInstances";
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
+   resetShowParameters(base_url + "/browsing/stats");
    loadPage();
 });
 $("#go").click(function() {
-   $.showParameters.url = $('#theQueryUrl').val();
-   $.showParameters.parameters = {};
-   $.showParameters.breadcrumbs = [$.showParameters.url];
+   resetShowParameters($('#theQueryUrl').val());
    loadPage();
 });
 
