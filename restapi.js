@@ -1,9 +1,6 @@
 
 
 
-/*  deal with back button: https://developer.mozilla.org/en-US/docs/Web/API/History_API?redirectlocale=en-US&redirectslug=DOM%2FManipulating_the_browser_history#Adding_and_modifying_history_entries
-*/
-
 /*
  * separate true url from bracketed syntax at the end listing REST parameters
  * i.e.  http://abc/def/{?thi,asdf} ->
@@ -63,13 +60,16 @@ function actuator(itemname, fullurl) {
          var humanname = itemname.split(":")[1];
          var nicename = name2token(humanname);
          if (!(nicename in $.showParameters.checkhandlers)) {
-             $("#checkHandlingArea").append('<div class="checkContainer"> ' + humanname + ': <input class="checkToggle checkButtons" value="Toggle Checkboxes" nicename="' + nicename + '" type=button>' +
-                                             '<input class="checkActivate checkButtons veryVisibleButton" disabled="true" value="Submit Checkboxes" nicename="' + nicename + '" type=button></div>');
+             $("#checkHandlingArea").append('<div class="checkContainer"> ' + 
+                 humanname + ': <input class="checkToggle checkButtons" value="Toggle Checkboxes" nicename="' + nicename + '" type=button>' +
+                 '<input class="checkActivate checkButtons veryVisibleButton" disabled="true" value="Submit Checkboxes" nicename="' + nicename + '" type=button></div>');
              $.showParameters.checkhandlers[nicename] = 1;
          }
-         return "<div class='checkContainer'><input class='" + nicename + " checkmark' value='on' nicename='" + nicename + "' desturl='" + fullurl + "' type=checkbox></input>" + humanname + "</div>";
+         return "<div class='checkContainer'><input class='" + 
+                nicename + " checkmark' value='on' nicename='" + nicename + "' desturl='" + fullurl + "' type=checkbox></input>" + humanname + "</div>";
     } else {
-         return "<input class='actions' id='go_" + itemname + "' value='" + itemname + "' desturl='" + fullurl + "' type=submit></input>";
+         var enabled = (fullurl.length > 0) ? "" : "disabled";
+         return "<input " + enabled + " class='actions' id='go_" + itemname + "' value='" + itemname + "' desturl='" + fullurl + "' type=submit></input>";
     }
 }
 
@@ -188,6 +188,50 @@ $(function() {
 /* 
  * Return html code for the block of info about what page we're showing
  */
+function prepare_pageinfo(result) {
+    var html = "";
+    if ("page" in result) {
+        if ("first" in result._links) {
+            html += actuator("|<", result._links.first.href);
+            delete result._links["first"];
+        } else {
+            html += actuator("|<","");
+        }
+        html += "&nbsp;"
+        if ("prev" in result._links) {
+            html += actuator("<", result._links.prev.href);
+            delete result._links["prev"];
+        } else {
+            html += actuator("<","");
+        }
+        html += "&nbsp;"
+        if ("next" in result._links) {
+            html += actuator(">", result._links.next.href);
+            delete result._links["next"];
+        } else {
+            html += actuator(">","");
+        }
+        html += "&nbsp;"
+        if ("last" in result._links) {
+            html += actuator(">|", result._links.last.href);
+            delete result._links["last"];
+        } else {
+            html += actuator(">|","");
+        }
+        if ("self" in result._links) {
+            delete result._links["self"];
+        }
+        html += "&nbsp;"
+        html += "Page " + (1+result["page"]["number"]) + " of " + result["page"]["totalPages"] ;
+        //Object.keys(result["page"]).forEach(function(i) { html += "<span class='pageinfo'>" + i + ": " + result["page"][i] + "</span>"; } );
+    }
+    return [result, html];
+}
+
+
+/* 
+ * Return html code for the block of info about what page we're showing
+ */
 function pageinfo(result) {
     var html = "";
     if ("page" in result) {
@@ -209,7 +253,7 @@ function maketable(result) {
         items = [{}];
         keys = [];
         Object.keys(result).forEach(function(k) {
-            if (k != "_links") {
+            if (k != "_links" && (k != "page" || !("number" in result[k]))) {
                keys += k;
                items[0][k] = result[k]; 
             }
@@ -358,8 +402,10 @@ function loadPage() {
    $.getJSON($.showParameters.url, $.showParameters.parameters).done(function(result) {
         if (!("_links" in result)) { result._links = {}; }
 
-        $("#output").html(links(result._links) + pageinfo(result) + maketable(result));
-        $("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
+        [result, pagination] = prepare_pageinfo(result);
+        //$("#output").html(links(result._links) + pageinfo(result) + maketable(result));
+        $("#output").html(links(result._links) + pagination + maketable(result));
+        //$("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
         displayBreadcrumbs();      
         $(window).trigger('resize.stickyTableHeaders');
    })
