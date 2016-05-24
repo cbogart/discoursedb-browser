@@ -59,13 +59,15 @@ function actuator(itemname, fullurl) {
     if (itemname.startsWith("chk:")) {
          var humanname = itemname.split(":")[1];
          var nicename = name2token(humanname);
+         var color = ' style="background: ' + hashColor(nicename,true) + '" ';
+         var buttoncolor = ' style="background: ' + hashColor(nicename,false) + '" ';
          if (!(nicename in $.showParameters.checkhandlers)) {
-             $("#checkHandlingArea").append('<div class="checkContainer"> ' + 
+             $("#checkHandlingArea").append('<div class="checkContainer"' + color + '> ' + 
                  humanname + ': <input class="checkToggle checkButtons" value="Toggle Checkboxes" nicename="' + nicename + '" type=button>' +
                  '<input class="checkActivate checkButtons veryVisibleButton" disabled="true" value="Submit Checkboxes" nicename="' + nicename + '" type=button></div>');
              $.showParameters.checkhandlers[nicename] = 1;
          }
-         return "<div class='checkContainer'><input class='" + 
+         return "<div class='checkContainer'" + color + "'><input class='" + 
                 nicename + " checkmark' value='on' nicename='" + nicename + "' desturl='" + fullurl + "' type=checkbox></input>" + humanname + "</div>";
     } else {
          var enabled = (fullurl.length > 0) ? "" : "disabled";
@@ -110,6 +112,17 @@ function name2token(name) {
     return name.replace(/[^\w]/g, '');
 }
 
+function enableIfAppropriate(nicename) {
+    var anychecked = false;
+    console.log("Maybe enabling button: checking " + "."+nicename);
+    $("." + nicename).each(function(i,chkbox) {
+        console.log("checking " + chkbox);
+        anychecked = anychecked || $(chkbox).prop("checked");
+    });
+    console.log("  anychecked=" + anychecked);
+    $(".checkActivate[nicename='" + nicename + "']").prop("disabled", !anychecked);
+}
+
 /*
  * When user clicks a link (created by links() function),
  * set the url and parameters and issue the rest request
@@ -128,17 +141,11 @@ $(function() {
         console.log("Toggling " + chkbox);
         $(chkbox).attr("checked", !$(chkbox).attr("checked"));
     });
+    enableIfAppropriate(nicename);
   });
   $(document).on('click', '.checkmark', function(event) {
     var nicename = $(event.target).attr("nicename");
-    var anychecked = false;
-    console.log("Maybe enabling button: checking " + "."+nicename);
-    $("." + nicename).each(function(i,chkbox) {
-        console.log("checking " + chkbox);
-        anychecked = anychecked || $(chkbox).prop("checked");
-    });
-    console.log("  anychecked=" + anychecked);
-    $(".checkActivate[nicename='" + nicename + "']").prop("disabled", !anychecked);
+    enableIfAppropriate(nicename);
   });
   $(document).on('click', '.checkActivate', function(event) {
     var nicename = $(event.target).attr("nicename");
@@ -403,9 +410,7 @@ function loadPage() {
         if (!("_links" in result)) { result._links = {}; }
 
         [result, pagination] = prepare_pageinfo(result);
-        //$("#output").html(links(result._links) + pageinfo(result) + maketable(result));
         $("#output").html(links(result._links) + pagination + maketable(result));
-        //$("#searching").html(links(result._links) + pageinfo(result) + maketable(result));
         displayBreadcrumbs();      
         $(window).trigger('resize.stickyTableHeaders');
    })
@@ -426,6 +431,7 @@ function loadMultiplePages(urls) {
       console.log("D" + urls.length);
    } else {
       console.log("E" + urls.length);
+      window.history.pushState($.showParameters,""); 
       $.showParameters.url = urls[0];
       $.showParameters.parameters = {};
       $.showParameters.checkhandlers = {};
@@ -434,6 +440,36 @@ function loadMultiplePages(urls) {
       console.log("F" + urls.length);
    }
 }
+
+// String hash from http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+
+function stringHash (s) {
+  var hash = 0, i, chr, len;
+  if (s.length === 0) return hash;
+  for (i = 0, len = s.length; i < len; i++) {
+    chr   = s.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+//Return a color unique for this key, brigher if selected.
+//Of course the color can't really be unique because there are more keys
+//in the world than colors; but the algorithm tries to make similar strings
+//come out different colors so they can be distinguished in a chart or graph"""
+function hashColor(key, selected) {
+
+    function tw(t) { return t ^ (t << (t % 5)) ^ (t << (6 + (t % 7))) ^ (t << (13 + (t % 11))); }
+    function hex2(t) { return ("00"+t.toString(16)).substr(-2); }
+    var theHash = tw(stringHash(key) % 5003)
+    var ifsel = selected?0x80:0x00;
+    r = ifsel | (theHash & 0x7f);
+    g = ifsel | ((theHash >> 8) & 0x7F);
+    b = ifsel | ((theHash >> 16) & 0x7F);
+    return "#" + hex2(r) + hex2(g) + hex2(b);
+}
+
 
 function resetShowParameters(url) {
    $.showParameters.url = url;
