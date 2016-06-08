@@ -35,7 +35,7 @@
      -webkit-border-radius:6px;
   }
   .checkContainer {
-     border:solid 1px #555; 
+     border:solid 1px #555;
      background:#ffc;
      padding:1px;
      padding-left:6px;
@@ -68,11 +68,15 @@
      padding:2px;
      margin:1px;
   }
+  .entity td { border:solid 1px #934 }
+  .embedded td { border:solid 1px #394 }
   table {border-collapse:collapse; table-layout:auto; width:100%;}
-  table td {border:solid 1px #555; word-wrap:break-word;}
+  table td {word-wrap:break-word;}
 </style>
 <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
 <script type="text/javascript" src="jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="jquery.form.min.js"></script>
+<script type="text/javascript" src="URI.js"></script>
 </head>
 <body>
 
@@ -80,10 +84,11 @@
 <span id="breadcrumbs"></span>
 </td></tr></table>
 
-<input size=150 type='text' id="theQueryUrl"></input><br><input id="go" type="submit">
+<form id="queryUrlForm"><input size=150 type='text' id="theQueryUrl"></input></form>
 <p>
-<input id="stats" type="submit" value="Stats"/>
+<input id="stats" type="submit" value="Database Top-level menu">
 <div id="checkHandlingArea"></div>
+<div id="actionlist"></div>
 <p><div id="output">WAIT.... loading data</div>
 <p>
 <script src="restapi.js"></script>
