@@ -457,7 +457,9 @@ function do_maketable(result, keys, items, tablestyle) {
         var columns = key_union(items);
 
         html = '<table id=stickyheaders class=' + tablestyle + ' width=100% border=1><thead class="tableFloatingHeaderOriginal"><tr>';
-        columns.forEach(function(entry) { html += "<th>" + entry + "</th>"; });
+        columns.forEach(function(entry) { 
+            html += "<th class='tableCol" + entry + "' >" + entry + "</th>"; 
+        });
         html += "</tr></thead><tbody>\n";
         items.forEach(function(item) {
              if (item != "_links") {
