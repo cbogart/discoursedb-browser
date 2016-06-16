@@ -213,6 +213,15 @@ function loadcookielist() {
     return [];
 }
 
+/*
+ *  Enable or disable buttons and checkmarks so the user can only
+ *  touch controls that will do something useful.
+ *
+ *  checkmark = the check boxes next to each row
+ *  nicename = determines the color and function of a coordinated set of checkboxes and top-of-form stuff
+ *  toggle = the button that inverts state of all checkboxes of a particular color
+ *  activate = button that submits the form for all checkboxes of that matching color.
+ */
 function enableIfAppropriate(nicename) {
     var anychecked = false;
     console.log("Maybe enabling button: checking " + "."+nicename);
@@ -221,6 +230,18 @@ function enableIfAppropriate(nicename) {
         anychecked = anychecked || $(chkbox).prop("checked");
     });
     console.log("  anychecked=" + anychecked);
+    if (anychecked) {
+      // Hide all check, toggle, and activates EXCEPT for this "nicename" category
+      $(".checkmark").prop("disabled", true);
+      $(".checkToggle").prop("disabled", true);
+      $(".checkActivate").prop("disabled", true);
+      $("." + nicename).prop("disabled", false);
+      $(".checkToggle[nicename='" + nicename + "']").prop("disabled", false);
+    } else {
+      // Otherwise, activate all checks and toggles (but, not activate)
+      $(".checkToggle").prop("disabled", false);
+      $(".checkmark").prop("disabled", false);
+    }
     $(".checkActivate[nicename='" + nicename + "']").prop("disabled", !anychecked);
 }
 
@@ -668,6 +689,14 @@ function resetShowParameters(url) {
 
 $("#stats").click(function() {
    resetShowParameters(base_url + "/browsing/stats");
+   loadPage();
+});
+$("#lsExport").click(function() {
+   resetShowParameters(base_url + "/browsing/lightsideExports");
+   loadPage();
+});
+$("#bratExport").click(function() {
+   resetShowParameters(base_url + "/browsing/bratExports");
    loadPage();
 });
 $("#go").click(function() {
