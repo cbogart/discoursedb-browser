@@ -457,8 +457,8 @@ function do_maketable(result, keys, items, tablestyle) {
         var columns = key_union(items);
 
         html = '<table id=stickyheaders class=' + tablestyle + ' width=100% border=1><thead class="tableFloatingHeaderOriginal"><tr>';
-        columns.forEach(function(entry) { 
-            html += "<th class='tableCol" + entry + "' >" + entry + "</th>"; 
+        columns.forEach(function(entry) {
+            html += "<th class='tableCol" + entry + "' >" + entry + "</th>";
         });
         html += "</tr></thead><tbody>\n";
         items.forEach(function(item) {
@@ -623,7 +623,13 @@ function loadPage() {
           $(window).trigger('resize.stickyTableHeaders');
      })
      .fail(function(jqXHR, textStatus, error) {
-         $("#output").html(textStatus + "<br>" + error );
+         var msg = "";
+         try {
+           msg = $.parseJSON(jqXHR.responseText).message;
+         } catch (e) {
+           msg = e;
+         }
+         $("#output").html(textStatus + "<br>" + error + "<br><b>" + msg + "</b>" );
      });
    }
 };
