@@ -1,4 +1,6 @@
 
+var base_url = "http://127.0.0.1:8080"
+
 URITemplate.prototype.variables = function() {
   return [].concat.apply([], this.parts.map( p =>  (p.variables || []).map(v => v.name )));
 }
@@ -90,7 +92,6 @@ var entityMap = {
   }
 
 
-var base_url = "http://localhost:5280";
 
 function persistChecks() {
 }
@@ -346,7 +347,7 @@ $(function() {
         console.log("CLICK", btn);
         var parts = url_parts(btn.attr("desturl"));
         console.log("url = ", parts.url);
-        if (!parts.url.startsWith(base_url)) {
+        if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) { 
             window.open(parts.url, "_external");
             return;
         }
@@ -629,7 +630,7 @@ function loadPage() {
          } catch (e) {
            msg = e;
          }
-         $("#output").html(textStatus + "<br>" + error + "<br><b>" + msg + "</b>" );
+         $("#output").html(textStatus + "<br>" + error + "<br><b>" + msg + "</b>" + " <br><table border=1><tr><td> " + jqXHR.responseText  + "</td></tr></table>");
      });
    }
 };
