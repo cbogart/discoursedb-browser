@@ -1,5 +1,5 @@
 
-var base_url = "http://127.0.0.1:8080"
+var base_url = "http://127.0.0.1/"
 
 URITemplate.prototype.variables = function() {
   return [].concat.apply([], this.parts.map( p =>  (p.variables || []).map(v => v.name )));
@@ -150,11 +150,11 @@ function actuator(itemname, fullurl) {
          var enabled = (fullurl.length > 0) ? "" : "disabled";
          if (false && itemname == "Upload") {
            return
-             "<input " + enabled + " class='actions' type='file' " +
+             "<input " + enabled + " class='actions myButtonTight' type='file' " +
              " id='go_" + itemname + "' value='" + itemname + "'" +
              " desturl='" + fullurl + "'></input>";
          } else {
-           return "<input " + enabled + " class='actions' type=submit " +
+           return "<input " + enabled + " class='actions myButtonTight' type=submit " +
              " id='go_" + itemname + "' value='" + itemname +
              "'  desturl='" + fullurl + "'></input>";
          }
@@ -457,7 +457,7 @@ function do_maketable(result, keys, items, tablestyle) {
         if (items.length == 0) { return "(no data)"; }
         var columns = key_union(items);
 
-        html = '<table id=stickyheaders class=' + tablestyle + ' width=100% border=1><thead class="tableFloatingHeaderOriginal"><tr>';
+        html = '<table id=stickyheaders class="' + tablestyle + ' responstable" width=100% border=1><thead class="tableFloatingHeaderOriginal"><tr>';
         columns.forEach(function(entry) {
             html += "<th class='tableCol" + entry + "' >" + entry + "</th>";
         });
