@@ -275,7 +275,7 @@ $(function() {
   };
   $(document).on('keydown', '#theQueryUrl', function(event) {
       if (event.keyCode == 13) {
-          $("#queryUrlForm").submit();
+          goDestUrl($('#theQueryUrl').val(), "","");
           return false;
       }
   });
@@ -336,16 +336,8 @@ $(function() {
     });
 */
   });
-  $(document).on('click', '.actions', function(event) {
-    var btn = $(event.target);
-    if (btn.is("[hist]")) {
-         var backsteps = parseInt(btn.attr("hist")) - (parseInt($.showParameters.breadcrumbs.length)-1);
-         if (backsteps < 0) {
-             window.history.go(backsteps);
-         }
-    } else {
-        console.log("CLICK", btn);
-        var parts = url_parts(btn.attr("desturl"));
+  function goDestUrl(desturl, parameter, theaction) {
+        var parts = url_parts(desturl);
         console.log("url = ", parts.url);
         if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) { 
             window.open(parts.url, "_external");
@@ -355,8 +347,8 @@ $(function() {
         $.showParameters.url = parts.url;
         //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
         window.history.pushState($.showParameters,"");
-        $.showParameters.parameters = substituteParameters(btn.attr("desturl"), btn.val());
-        $.showParameters.action = btn.attr("id");
+        $.showParameters.parameters = substituteParameters(desturl, parameter);
+        $.showParameters.action = theaction;
         $.showParameters.checkhandlers = {};
 /*         parts.parameterNames.forEach(function(p) {
             var inputid = "#go_" + btn.val();
@@ -367,6 +359,18 @@ $(function() {
          });
          console.log("params = ", $.showParameters.parameters);*/
          loadPage();
+  }
+  $(document).on('click', '.actions', function(event) {
+    var btn = $(event.target);
+    if (btn.is("[hist]")) {
+         var backsteps = parseInt(btn.attr("hist")) - (parseInt($.showParameters.breadcrumbs.length)-1);
+         if (backsteps < 0) {
+             window.history.go(backsteps);
+         }
+    } else {
+        console.log("CLICK", btn);
+        var desturl = btn.attr("desturl");
+        goDestUrl(desturl, btn.val(), btn.attr("id"));
      }
   });
 });
@@ -709,8 +713,7 @@ $("#bratExport").click(function() {
    loadPage();
 });
 $("#go").click(function() {
-   resetShowParameters($('#theQueryUrl').val());
-   loadPage();
+   goDestUrl($('#theQueryUrl').val(), "","");
 });
 
 loadPage();
