@@ -1,8 +1,33 @@
 
-var base_url = "http://127.0.0.1/"
+var base_url = "http://127.0.0.1:5280"
 
 URITemplate.prototype.variables = function() {
   return [].concat.apply([], this.parts.map( p =>  (p.variables || []).map(v => v.name )));
+}
+
+$.goDestUrl = function(desturl, parameter, theaction) {
+        var parts = url_parts(desturl);
+        console.log("url = ", parts.url);
+        if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) { 
+            window.open(parts.url, "_external");
+            return;
+        }
+        $.showParameters.breadcrumbs.push(parts.url);
+        $.showParameters.url = parts.url;
+        //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
+        window.history.pushState($.showParameters,"");
+        $.showParameters.parameters = substituteParameters(desturl, parameter);
+        $.showParameters.action = theaction;
+        $.showParameters.checkhandlers = {};
+/*         parts.parameterNames.forEach(function(p) {
+            var inputid = "#go_" + btn.val();
+            var paramid = "#param_" + btn.val() + "_" + p;
+            console.log("paramid = ", paramid);
+            $.showParameters.parameters[p] = $(paramid).val();
+            console.log("paramid contains " ,$(paramid).val());
+         });
+         console.log("params = ", $.showParameters.parameters);*/
+         loadPage();
 }
 
 $.postJSON = function(url, data, callback) {
@@ -275,7 +300,7 @@ $(function() {
   };
   $(document).on('keydown', '#theQueryUrl', function(event) {
       if (event.keyCode == 13) {
-          goDestUrl($('#theQueryUrl').val(), "","");
+          $.goDestUrl($('#theQueryUrl').val(), "","");
           return false;
       }
   });
@@ -336,30 +361,6 @@ $(function() {
     });
 */
   });
-  function goDestUrl(desturl, parameter, theaction) {
-        var parts = url_parts(desturl);
-        console.log("url = ", parts.url);
-        if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) { 
-            window.open(parts.url, "_external");
-            return;
-        }
-        $.showParameters.breadcrumbs.push(parts.url);
-        $.showParameters.url = parts.url;
-        //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
-        window.history.pushState($.showParameters,"");
-        $.showParameters.parameters = substituteParameters(desturl, parameter);
-        $.showParameters.action = theaction;
-        $.showParameters.checkhandlers = {};
-/*         parts.parameterNames.forEach(function(p) {
-            var inputid = "#go_" + btn.val();
-            var paramid = "#param_" + btn.val() + "_" + p;
-            console.log("paramid = ", paramid);
-            $.showParameters.parameters[p] = $(paramid).val();
-            console.log("paramid contains " ,$(paramid).val());
-         });
-         console.log("params = ", $.showParameters.parameters);*/
-         loadPage();
-  }
   $(document).on('click', '.actions', function(event) {
     var btn = $(event.target);
     if (btn.is("[hist]")) {
@@ -370,7 +371,7 @@ $(function() {
     } else {
         console.log("CLICK", btn);
         var desturl = btn.attr("desturl");
-        goDestUrl(desturl, btn.val(), btn.attr("id"));
+        $.goDestUrl(desturl, btn.val(), btn.attr("id"));
      }
   });
 });
@@ -713,7 +714,7 @@ $("#bratExport").click(function() {
    loadPage();
 });
 $("#go").click(function() {
-   goDestUrl($('#theQueryUrl').val(), "","");
+   $.goDestUrl($('#theQueryUrl').val(), "","");
 });
 
 loadPage();
