@@ -1,8 +1,49 @@
 
-var base_url = "http://127.0.0.1/"
+var base_url = "http://127.0.0.1:5280/"
 
 URITemplate.prototype.variables = function() {
   return [].concat.apply([], this.parts.map( p =>  (p.variables || []).map(v => v.name )));
+}
+
+function onSignIn(googleUser) {
+  var profile = googleUser.getBasicProfile();
+  console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+  console.log('Name: ' + profile.getName());
+  console.log('Image URL: ' + profile.getImageUrl());
+  console.log('Email: ' + profile.getEmail());
+  $.access_token = googleUser.getAuthResponse().id_token;
+  var dt = new Date().toLocaleString();
+  $("#currentuser").html("Current user: " + profile.getName() + ".  time=" + dt + " id=" + profile.getId() + " email " + profile.getEmail() + "// " + $.access_token + "// " + base_url + 'browsing/tokensigningoogle');
+  $.ajax({
+     type: "POST",
+     headers: { 
+        'Content-Type': 'application/x-www-form-urlencoded'
+	},
+     url: base_url + 'browsing/tokensigningoogle',
+     data: 'idtoken=' + $.access_token,
+     success: function(succ) {
+        console.log('Signed in ');
+     }
+  }).fail(function(fl) { console.log("FAIL"); console.log(fl); });
+  /*var xhr = new XMLHttpRequest();
+  xhr.open('POST', base_url + 'browsing/tokensigningoogle');
+        xhr.setRequestHeader('Content-Type',
+                'application/x-www-form-urlencoded');
+        xhr.onload = function() {
+            console.log('Signed in as: ' + xhr.responseText);
+        };
+        xhr.send('idtoken=' + $.access_token);
+	*/
+}
+
+$.openIdGetJson_deprecated = function(theUrl, theParameters, theSucces, theError) {
+   return $.ajax({
+      url: theUrl, type: 'GET', dataType: 'json',
+      success: theSuccess, error: theError,
+      beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);  
+      }
+   });
 }
 
 $.postJSON = function(url, data, callback) {
@@ -587,6 +628,7 @@ function displayBreadcrumbs() {
         }));
 }
 
+
 function loadPage() {
    $.volitile = {};
    showHistory();
@@ -615,20 +657,19 @@ function loadPage() {
    } else  {
      $("#output").html("Waiting for response from server.....");
      $("#checkHandlingArea").html("");
-     $.getJSON($.showParameters.url, $.showParameters.parameters).done(function(result) {
+     $.getJSON($.showParameters.url, $.showParameters.parameters, function(result) {
           if (!("_links" in result)) { result._links = {}; }
 
           [result, pagination] = prepare_pageinfo(result);
           $("#output").html(links(result._links) + pagination + maketable(result));
           displayBreadcrumbs();
           $(window).trigger('resize.stickyTableHeaders');
-     })
-     .fail(function(jqXHR, textStatus, error) {
+     }, function(jqXHR, textStatus, error) {
          var msg = "";
          try {
            msg = $.parseJSON(jqXHR.responseText).message;
          } catch (e) {
-           msg = e;
+           msg = jqXHR.responseText + " error: " + e;
          }
          $("#output").html(textStatus + "<br>" + error + "<br><b>" + msg + "</b>" + " <br><table border=1><tr><td> " + jqXHR.responseText  + "</td></tr></table>");
      });
@@ -641,11 +682,11 @@ function loadMultiplePages(urls) {
    $("#checkHandlingArea").html("");
    if (urls.length > 1) {
       console.log("A" + urls.length);
-      $.getJSON(urls[0][0], urls[0][1]).done(function(result) {
+      $.getJSON(urls[0][0], urls[0][1], function(result) {
         console.log("B" + urls.length);
         loadMultiplePages(urls.slice(1));
         console.log("C" + urls.length);
-      });
+      }, function() {} );
       console.log("D" + urls.length);
    } else {
       console.log("E" + urls.length);
