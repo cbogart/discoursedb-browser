@@ -473,7 +473,11 @@ function do_maketable(result, keys, items, tablestyle) {
                    if (col == "_links") {
                     html += "<td>" + links(item[col]) + "</td>";
                    } else if (col == "content" || col == "body" || col == "text") {
-                    html += "<td><pre>" + escapeHtml(item[col]) + "</pre></td>";
+                    outputstring = item[col];
+                    dummydoc = document.createElement("div");
+                    dummydoc.innerHTML = item[col];
+                    outputstring = dummydoc.innerText;
+                    html += "<td><pre>" + escapeHtml(outputstring) + "</pre></td>";
                    } else {
                     html += "<td>" + pretty_print(item[col]) + "</td>";
                  }
