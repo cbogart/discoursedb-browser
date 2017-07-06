@@ -1,8 +1,15 @@
 
-var base_url = "http://127.0.0.1:5280/"
+var base_url = "https://localhost:5980"
 
 URITemplate.prototype.variables = function() {
   return [].concat.apply([], this.parts.map( p =>  (p.variables || []).map(v => v.name )));
+}
+
+function signOut() {
+    var auth2 = gapi.auth2.getAuthInstance();
+    auth2.signOut().then(function () {
+        console.log('User signed out.');
+    });
 }
 
 function onSignIn(googleUser) {
@@ -13,18 +20,22 @@ function onSignIn(googleUser) {
   console.log('Email: ' + profile.getEmail());
   $.access_token = googleUser.getAuthResponse().id_token;
   var dt = new Date().toLocaleString();
-  $("#currentuser").html("Current user: " + profile.getName() + ".  time=" + dt + " id=" + profile.getId() + " email " + profile.getEmail() + "// " + $.access_token + "// " + base_url + 'browsing/tokensigningoogle');
+  $("#currentuser").html("Current user: " + profile.getName());
+  /*+ ".  time=" + dt + " id=" + profile.getId() + " email " + profile.getEmail() + "// " + $.access_token + "// " + base_url + 'browsing/tokensigningoogle');*/
+  /*
   $.ajax({
      type: "POST",
-     headers: { 
+     headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
 	},
+     xhrFields: { withCredentials: true },
      url: base_url + 'browsing/tokensigningoogle',
      data: 'idtoken=' + $.access_token,
      success: function(succ) {
         console.log('Signed in ');
      }
   }).fail(function(fl) { console.log("FAIL"); console.log(fl); });
+  */
   /*var xhr = new XMLHttpRequest();
   xhr.open('POST', base_url + 'browsing/tokensigningoogle');
         xhr.setRequestHeader('Content-Type',
@@ -36,14 +47,45 @@ function onSignIn(googleUser) {
 	*/
 }
 
-$.openIdGetJson_deprecated = function(theUrl, theParameters, theSucces, theError) {
+$.openIdGetJson = function(theUrl, theParameters, theSuccess, theError) {
+   console.log("In openIdGetJson: " + theUrl + " p " + JSON.stringify(theParameters));
+   urlParameterized = insertParameters(theUrl, theParameters);
+   console.log("   -> url=" + urlParameterized);
    return $.ajax({
-      url: theUrl, type: 'GET', dataType: 'json',
-      success: theSuccess, error: theError,
+      url: urlParameterized,
+      type: 'GET',
+      dataType: 'json',
+      success: theSuccess,
+      error: theError,
+      xhrFields: { withCredentials: true },
       beforeSend: function (xhr) {
-          xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);  
+          xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);
       }
    });
+}
+$.goDestUrl = function(desturl, parameter, theaction) {
+        var parts = url_parts(desturl);
+        console.log("url = ", parts.url);
+        if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) {
+            window.open(parts.url, "_external");
+            return;
+        }
+        $.showParameters.breadcrumbs.push(parts.url);
+        $.showParameters.url = parts.url;
+        //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
+        window.history.pushState($.showParameters,"");
+        $.showParameters.parameters = substituteParameters(desturl, parameter);
+        $.showParameters.action = theaction;
+        $.showParameters.checkhandlers = {};
+/*         parts.parameterNames.forEach(function(p) {
+            var inputid = "#go_" + btn.val();
+            var paramid = "#param_" + btn.val() + "_" + p;
+            console.log("paramid = ", paramid);
+            $.showParameters.parameters[p] = $(paramid).val();
+            console.log("paramid contains " ,$(paramid).val());
+         });
+         console.log("params = ", $.showParameters.parameters);*/
+         loadPage();
 }
 
 $.postJSON = function(url, data, callback) {
@@ -52,6 +94,7 @@ $.postJSON = function(url, data, callback) {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     },
+    xhrFields: { withCredentials: true },
     'type': 'POST',
     'url': url,
     'data': JSON.stringify(data),
@@ -60,15 +103,36 @@ $.postJSON = function(url, data, callback) {
     });
 };
 
+$.postFileUpload2 = function(url, that, callback) {
+    return jQuery.ajax({
+       'url': url,
+       'data': new FormData("file-1", $(":file")[0].files[0]),
+       cache: false,
+       contentType: false,
+       processData: false,
+       type: 'POST',
+       xhrFields: { withCredentials: true },
+       beforeSend: function (xhr) {
+         xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);
+       },
+       'success': callback
+    });
+}
+
 $.postFileUpload = function(url, that, callback) {
     return jQuery.ajax({
     headers: {
         'Accept': 'multipart/form-data',
-        'Content-Type': 'multipart/form-data'
+    },
+    contentType: false,
+    processData:false,
+    xhrFields: { withCredentials: true },
+    beforeSend: function (xhr) {
+         xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);
     },
     'type': 'POST',
     'url': url,
-    'data': new FormData(that),
+    'data': new FormData("file-1", $(":file")[0].files[0]),
     'success': callback
     });
 };
@@ -316,7 +380,7 @@ $(function() {
   };
   $(document).on('keydown', '#theQueryUrl', function(event) {
       if (event.keyCode == 13) {
-          $("#queryUrlForm").submit();
+          $.goDestUrl($('#theQueryUrl').val(), "","");
           return false;
       }
   });
@@ -341,8 +405,11 @@ $(function() {
         console.log("Adding " + $(chkbox) + " if appropriate");
         if (chkbox.checked) {
             var parts = url_parts(chkbox.getAttribute("desturl"));
-            console.log("URL PART IS " + parts.url)
-            postUrls.push([parts.url,
+            console.log("URL PART IS " + parts.url);
+            console.log("checkbox desturl is " + chkbox.getAttribute("desturl"));
+            console.log("nicename is " + nicename);
+            console.log("subst is " + substituteParameters(chkbox.getAttribute("desturl"), nicename));
+            postUrls.push([chkbox.getAttribute("desturl"), //parts.url,
               substituteParameters(chkbox.getAttribute("desturl"), nicename)]);
         }
     });
@@ -353,6 +420,10 @@ $(function() {
     var form = this;
     $(this).ajaxSubmit({
       target: '#output',
+      xhrFields: { withCredentials: true },
+      beforeSend: function (xhr) {
+          xhr.setRequestHeader("Authorization", "BEARER " + $.access_token);
+      },
       success: function (result, statusText, xhr, $form) {
            if (!("_links" in result)) { result._links = {}; }
 
@@ -376,6 +447,7 @@ $(function() {
         $("#output").html(textStatus + "<br>" + error );
     });
 */
+    return false;
   });
   $(document).on('click', '.actions', function(event) {
     var btn = $(event.target);
@@ -386,28 +458,8 @@ $(function() {
          }
     } else {
         console.log("CLICK", btn);
-        var parts = url_parts(btn.attr("desturl"));
-        console.log("url = ", parts.url);
-        if (!parts.url.startsWith(base_url) || parts.url.indexOf("/brat/index") > -1) { 
-            window.open(parts.url, "_external");
-            return;
-        }
-        $.showParameters.breadcrumbs.push(parts.url);
-        $.showParameters.url = parts.url;
-        //window.history.pushState({url: parts.url, crumbs: $.showParameters.breadcrumbs }, "");
-        window.history.pushState($.showParameters,"");
-        $.showParameters.parameters = substituteParameters(btn.attr("desturl"), btn.val());
-        $.showParameters.action = btn.attr("id");
-        $.showParameters.checkhandlers = {};
-/*         parts.parameterNames.forEach(function(p) {
-            var inputid = "#go_" + btn.val();
-            var paramid = "#param_" + btn.val() + "_" + p;
-            console.log("paramid = ", paramid);
-            $.showParameters.parameters[p] = $(paramid).val();
-            console.log("paramid contains " ,$(paramid).val());
-         });
-         console.log("params = ", $.showParameters.parameters);*/
-         loadPage();
+        var desturl = btn.attr("desturl");
+        $.goDestUrl(desturl, btn.val(), btn.attr("id"));
      }
   });
 });
@@ -510,7 +562,11 @@ function do_maketable(result, keys, items, tablestyle) {
                    if (col == "_links") {
                     html += "<td>" + links(item[col]) + "</td>";
                    } else if (col == "content" || col == "body" || col == "text") {
-                    html += "<td><pre>" + escapeHtml(item[col]) + "</pre></td>";
+		    outputstring = item[col];
+		    dummydoc = document.createElement("div");
+		    dummydoc.innerHTML = item[col];
+		    outputstring = dummydoc.innerText;
+                    html += "<td><pre>" + escapeHtml(outputstring) + "</pre></td>";
                    } else {
                     html += "<td>" + pretty_print(item[col]) + "</td>";
                  }
@@ -648,16 +704,13 @@ function loadPage() {
 
       var url = ((new URITemplate($.showParameters.url)).expand($.showParameters.parameters)).toString();
       $("#form_Upload").attr("action", url);
-      $("#form_Upload").submit();
-
-
-      //$("#output").html("Waiting for response from server.....");
-      //$("#checkHandlingArea").html("");
       $.showParameters.action = "";
    } else  {
      $("#output").html("Waiting for response from server.....");
      $("#checkHandlingArea").html("");
-     $.getJSON($.showParameters.url, $.showParameters.parameters, function(result) {
+     console.log("Calling openIdGetJson");
+     $.openIdGetJson($.showParameters.url, $.showParameters.parameters, function(result) {
+          console.log("...success from openIdGetJson");
           if (!("_links" in result)) { result._links = {}; }
 
           [result, pagination] = prepare_pageinfo(result);
@@ -677,12 +730,12 @@ function loadPage() {
 };
 
 function loadMultiplePages(urls) {
-   console.log("LMP " + urls);
+   console.log("LMP " + JSON.stringify(urls));
    $("#output").html("" + urls.length + " actions being submitted... please wait");
    $("#checkHandlingArea").html("");
    if (urls.length > 1) {
       console.log("A" + urls.length);
-      $.getJSON(urls[0][0], urls[0][1], function(result) {
+      $.openIdGetJson(urls[0][0], urls[0][1], function(result) {
         console.log("B" + urls.length);
         loadMultiplePages(urls.slice(1));
         console.log("C" + urls.length);
@@ -750,8 +803,7 @@ $("#bratExport").click(function() {
    loadPage();
 });
 $("#go").click(function() {
-   resetShowParameters($('#theQueryUrl').val());
-   loadPage();
+   $.goDestUrl($('#theQueryUrl').val(), "","");
 });
 
 loadPage();

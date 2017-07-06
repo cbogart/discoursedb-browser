@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>DiscourseDB</title>
-<!--<meta name="google-signin-client_id" content="336511606727-reg55r59io04v8n4c6hjpo9t8prfrf20.apps.googleusercontent.com">-->
+<meta name="google-signin-client_id" content="336511606727-reg55r59io04v8n4c6hjpo9t8prfrf20.apps.googleusercontent.com">
 <style>
   html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}
  .crumb {
@@ -160,32 +160,39 @@
     top:1px;
 }
 
+.rightinset {
+    width: 40%; position:absolute; top:0; right:0;
+}
   .entity td { border:solid 1px }
   .embedded td { border:solid 1px }
   table {border-collapse:collapse; table-layout:auto; width:100%;}
   table td {word-wrap:break-word;}
 </style>
 <link rel="stylesheet" type="text/css" href="jlAqp_mod.css" media="screen">
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.min.js"></script>
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.8.2.min.js"></script>
 <script type="text/javascript" src="jquery.stickytableheaders.min.js"></script>
 <script type="text/javascript" src="jquery.form.min.js"></script>
 <script type="text/javascript" src="URI.js"></script>
-<!--<script src="https://apis.google.com/js/platform.js" async defer></script>-->
+<script src="https://apis.google.com/js/platform.js" async defer></script>
 </head>
 <body>
 
-<img src="discoursedb_logo.png" align=right>
+<div class="rightinset" >
+<img src="discoursedb_logo.png">
+<div id="currentuser">Not logged in</div>
+<div class="g-signin2" data-onsuccess="onSignIn"></div>
+<a href="#" onclick="signOut();">Sign out</a>
+</div>
 
 <div class="invisible">
 <table><tr><td>
 <span id="breadcrumbs"></span>
 </td></tr></table>
 
-<form id="queryUrlForm"><input size=75 type='text' id="theQueryUrl"></input></form>
 </div>
+<form id="queryUrlForm"><input size=75 type='text' id="theQueryUrl"></input></form>
+<input id="go" class="myButton" type="submit" value="Go"/>
 <p>
-<!--<div id="currentuser">Not logged in</div>
-<div class="g-signin2" data-onsuccess="onSignIn"></div>-->
 <input id="stats" class="myButton" type="submit" value="Database Top-level menu"><br/>
 <input id="bratExport" class="myButton" type="submit" value="BRAT export files"><br/>
 <input id="lsExport" type="submit" class="myButton" value="LightSide export files">
